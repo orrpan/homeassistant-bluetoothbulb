@@ -71,4 +71,4 @@ light:
 - [x] Brightness control
 - [x] Color control
 - [ ] Independent brightness and color control
-- [ ] Auto install the required module
+- [x] Auto install the required module
