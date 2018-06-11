@@ -7,7 +7,7 @@ import voluptuous as vol
 # Import the device class from the component that you want to support
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS, ATTR_RGB_COLOR, ATTR_EFFECT,
-    SUPPORT_RGB_COLOR, SUPPORT_BRIGHTNESS, SUPPORT_EFFECT,
+    SUPPORT_COLOR, SUPPORT_BRIGHTNESS, SUPPORT_EFFECT,
     Light, PLATFORM_SCHEMA
 )
 
@@ -127,7 +127,7 @@ class MagicBlueLight(Light):
     @property
     def supported_features(self):
         """Return the supported features."""
-        return SUPPORT_BRIGHTNESS | SUPPORT_RGB_COLOR | SUPPORT_EFFECT
+        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
 
     @property
     def effect_list(self):
