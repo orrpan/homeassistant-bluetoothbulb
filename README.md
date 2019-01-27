@@ -1,5 +1,7 @@
-# homeassistant-magicblue  mylight bluetooth speaker bulb.
-MagicBlue custom component for Home Assistant
+# homeassistant-bluetoothbulb.
+Bluetooth bulbs custom component for Home Assistant
+
+Mylight and MagicBlue (not currently working)
 
 [MagicBlue](http://www.gearbest.com/smart-light-bulb/pp_230349.html) is a $9.99 bluetooth LED bulb.
 

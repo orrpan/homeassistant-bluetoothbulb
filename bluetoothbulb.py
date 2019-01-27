@@ -16,9 +16,9 @@ import homeassistant.util.color as color_util
 
 # Home Assistant depends on 3rd party packages for API specific code.
 REQUIREMENTS = [
-    #'magicblue==0.5.0',
-    'https://github.com/orrpan/magicblue/archive/master.zip'
-    '#magicblue==master',
+    'magicblue==0.6.0',
+    'https://github.com/orrpan/mylight/archive/master.zip'
+    '#mylight==master',
     'bluepy==1.1.4',
     'webcolors'
 ]
@@ -26,7 +26,11 @@ REQUIREMENTS = [
 CONF_NAME = 'name'
 CONF_ADDRESS = 'address'
 CONF_VERSION = 'version'
+CONF_TYPE = 'type'
 CONF_HCI_DEVICE_ID = 'hci_device_id'
+
+TYPE_MAGICBLUE = 'magicblue'
+TYPE_MYLIGHT = 'mylight'
 
 DEFAULT_VERSION = 9
 DEFAULT_HCI_DEVICE_ID = 0
@@ -35,7 +39,8 @@ DEFAULT_HCI_DEVICE_ID = 0
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
     vol.Required(CONF_ADDRESS): cv.string,
-    vol.Optional(CONF_VERSION, default=DEFAULT_VERSION): cv.positive_int,
+    vol.Required(CONF_TYPE): cv.string,
+    vol.Optional(CONF_VERSION, default=DEFAULT_VERSION): cv.string,
     vol.Optional(CONF_HCI_DEVICE_ID, default=DEFAULT_HCI_DEVICE_ID):
         cv.positive_int
 })
@@ -83,23 +88,28 @@ def comm_lock(blocking=True):
 
 # region Home-Assistant
 def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Setup the MagicBlue platform."""
+    """Setup the Bluetooth Bulb platform."""
     from magicblue import MagicBlue
+    from mylight import MyLight
 
     # Assign configuration variables. The configuration check takes care they are
     # present.
     bulb_name = config.get(CONF_NAME)
     bulb_mac_address = config.get(CONF_ADDRESS)
     bulb_version = config.get(CONF_VERSION)
+    bulb_type = config.get(CONF_TYPE)
     hci_device_id = config.get(CONF_HCI_DEVICE_ID)
 
-    bulb = MagicBlue(bulb_mac_address, hci_device_id, bulb_version)
+    if bulb_type == TYPE_MAGICBLUE:
+        bulb = MagicBlue(bulb_mac_address, hci_device_id, bulb_version)
+    elif bulb_type == TYPE_MYLIGHT:
+        bulb = MyLight(bulb_mac_address, hci_device_id, bulb_version)
 
     # Add devices
-    add_devices([MagicBlueLight(hass, bulb, bulb_name)])
+    add_devices([BluetoothBulbLight(hass, bulb, bulb_name)])
     
 
-class MagicBlueLight(Light):
+class BluetoothBulbLight(Light):
     """Representation of an Bluetooth Light."""
     def __init__(self, hass, light, name):
         """Initialize an Bluetooth Light."""
@@ -217,7 +227,7 @@ class MagicBlueLight(Light):
     @comm_lock()
     def turn_off(self, **kwargs):
         """Instruct the light to turn off."""
-        _LOGGER.debug("%s: MagicBlueLight.turn_off()", self)
+        _LOGGER.debug("%s: BluetoothBulbLight.turn_off()", self)
         if not self._light.test_connection():
             try:
                 self._light.connect()
@@ -229,8 +239,8 @@ class MagicBlueLight(Light):
         self._is_on = False
 
     def __str__(self):
-        return "<MagicBlueLight('{}', '{}')>".format(self._light, self._name)
+        return "<BluetoothBulbLight('{}', '{}')>".format(self._light, self._name)
 
     def __repr__(self):
-        return "<MagicBlueLight('{}', '{}')>".format(self._light, self._name)
+        return "<BluetoothBulbLight('{}', '{}')>".format(self._light, self._name)
 # endregion
