@@ -6,12 +6,13 @@ import voluptuous as vol
 
 # Import the device class from the component that you want to support
 from homeassistant.components.light import (
-    ATTR_BRIGHTNESS, ATTR_RGB_COLOR, ATTR_EFFECT,
+    ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_EFFECT,
     SUPPORT_COLOR, SUPPORT_BRIGHTNESS, SUPPORT_EFFECT,
-    Light, PLATFORM_SCHEMA
+    Light, PLATFORM_SCHEMA, SUPPORT_WHITE_VALUE, ATTR_WHITE_VALUE
 )
 
 import homeassistant.helpers.config_validation as cv
+import homeassistant.util.color as color_util
 
 # Home Assistant depends on 3rd party packages for API specific code.
 REQUIREMENTS = [
@@ -23,23 +24,17 @@ REQUIREMENTS = [
 ]
 
 CONF_NAME = 'name'
-CONF_BRAND = 'brand'
 CONF_ADDRESS = 'address'
 CONF_VERSION = 'version'
 CONF_HCI_DEVICE_ID = 'hci_device_id'
 
-BRAND_MAGICBLUE = 'magicblue'
-BRAND_MYLIGHT = 'mylight'
-
 DEFAULT_VERSION = 9
 DEFAULT_HCI_DEVICE_ID = 0
-DEFAULT_BRAND = BRAND_MAGICBLUE
 
 # Validation of the user's configuration
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_NAME): cv.string,
     vol.Required(CONF_ADDRESS): cv.string,
-    vol.Optional(CONF_BRAND, default=DEFAULT_BRAND): cv.string,
     vol.Optional(CONF_VERSION, default=DEFAULT_VERSION): cv.positive_int,
     vol.Optional(CONF_HCI_DEVICE_ID, default=DEFAULT_HCI_DEVICE_ID):
         cv.positive_int
@@ -95,32 +90,30 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     # present.
     bulb_name = config.get(CONF_NAME)
     bulb_mac_address = config.get(CONF_ADDRESS)
-    bulb_brand = config.get(CONF_BRAND)
     bulb_version = config.get(CONF_VERSION)
     hci_device_id = config.get(CONF_HCI_DEVICE_ID)
 
-    bulb = MagicBlue(bulb_mac_address, bulb_version)
+    bulb = MagicBlue(bulb_mac_address, hci_device_id, bulb_version)
 
     # Add devices
-    add_devices([MagicBlueLight(hass, bulb, bulb_name, bulb_brand, hci_device_id)])
+    add_devices([MagicBlueLight(hass, bulb, bulb_name)])
     
 
 class MagicBlueLight(Light):
-    """Representation of an MagicBlue Light."""
-    def __init__(self, hass, light, name, brand, hci_device_id):
-        """Initialize an MagicBlueLight."""
-        from magicblue import Effect
+    """Representation of an Bluetooth Light."""
+    def __init__(self, hass, light, name):
+        """Initialize an Bluetooth Light."""
 
         self.hass = hass
         self._light = light
         self._name = name
-        self._state = False
-        self._rgb = (255, 255, 255)
-        self._brightness = 255
+        self._is_on = light.is_on
+        self._hs_color = light.rgb_color
+        self._brightness = light.brightness
         self._available = False
-        self._effects = [e for e in Effect.__members__.keys()]
-        self._brand = brand
-        self._hci_device_id = hci_device_id
+        self._effect = light.effect
+        self._effects = [e for e in light.effects.__members__.keys()]
+        self._white = light.white
 
     @property
     def name(self):
@@ -128,24 +121,29 @@ class MagicBlueLight(Light):
         return self._name
 
     @property
-    def rgb_color(self):
-        """Return the RBG color value."""
-        return self._rgb
+    def is_on(self):
+        """Return true if light is on."""
+        return self._is_on
+
+    @property
+    def hs_color(self):
+        """Return the color property."""
+        return self._hs_color
 
     @property
     def brightness(self):
         """Return the brightness of the light (an integer in the range 1-255)."""
         return self._brightness
+    
+    @property
+    def available(self):
+        """Return status of available."""
+        return self._available
 
     @property
-    def is_on(self):
-        """Return true if light is on."""
-        return self._state
-
-    @property
-    def supported_features(self):
-        """Return the supported features."""
-        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
+    def effect(self):
+        """Return the number of effect."""
+        return self._effect
 
     @property
     def effect_list(self):
@@ -153,8 +151,14 @@ class MagicBlueLight(Light):
         return self._effects
 
     @property
-    def available(self):
-        return self._available
+    def white(self):
+        """Return white."""
+        return self._white
+
+    @property
+    def supported_features(self):
+        """Return the supported features."""
+        return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
 
     def update(self):
         _LOGGER.debug("%s.update()", self)
@@ -166,14 +170,13 @@ class MagicBlueLight(Light):
 
         try:
             if not self._light.test_connection():
-                self._light.connect(self._hci_device_id)
-            if self._brand == BRAND_MAGICBLUE:
-                device_info = self._light.get_device_info()
-                
-                self._state = device_info['on']
-                self._rgb = (device_info['r'], device_info['g'], device_info['b'])
-                self._brightness = device_info['brightness']
-            self._effect = None
+                self._light.connect()
+
+            self._light.update()
+            self._is_on = self._light.is_on
+            self._brightness = self._light.brightness
+            self._hs_color = color_util.color_RGB_to_hs(*self._light.rgb_color)
+            self._effect = self._light.effect
             self._available = True
         except Exception as ex:
             _LOGGER.debug("%s._update_blocking(): Exception during update status: %s", self, ex)
@@ -182,33 +185,34 @@ class MagicBlueLight(Light):
     @comm_lock()
     def turn_on(self, **kwargs):
         """Instruct the light to turn on."""
-        from magicblue import Effect
         _LOGGER.debug("%s.turn_on()", self)
         if not self._light.test_connection():
             try:
-                self._light.connect(self._hci_device_id)
+                self._light.connect()
             except Exception as e:
                 _LOGGER.error('%s.turn_on(): Could not connect to %s', self, self._light)
                 return
 
-        if not self._state:
+        if not self.is_on:
             self._light.turn_on()
+        else:
+            if ATTR_HS_COLOR in kwargs and ATTR_BRIGHTNESS in kwargs:
+                rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
+                self._light.set_all(rgb, kwargs[ATTR_BRIGHTNESS])
+                self._brightness = kwargs[ATTR_BRIGHTNESS]
+                self._hs_color = kwargs[ATTR_HS_COLOR]
+            elif ATTR_HS_COLOR in kwargs:
+                rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
+                self._light.set_rgb_color(rgb)
+                self._hs_color = kwargs[ATTR_HS_COLOR]
+            if ATTR_BRIGHTNESS in kwargs:
+                self._light.set_brightness(kwargs[ATTR_BRIGHTNESS])
+                self._brightness = kwargs[ATTR_BRIGHTNESS]
+            if ATTR_EFFECT in kwargs:
+                self._light.set_effect(Effect[kwargs[ATTR_EFFECT]])
+                self._effect = kwargs[ATTR_EFFECT]
 
-        if ATTR_RGB_COLOR in kwargs:
-            self._rgb = kwargs[ATTR_RGB_COLOR]
-            #self._brightness = 255
-            self._light.set_color(kwargs[ATTR_RGB_COLOR])
-
-        if ATTR_BRIGHTNESS in kwargs:
-            #self._rgb = (255, 255, 255)
-            self._brightness = kwargs[ATTR_BRIGHTNESS]
-            self._light.set_warm_light(self._brightness / 255)
-
-        if ATTR_EFFECT in kwargs:
-            self._effect = kwargs[ATTR_EFFECT]
-            self._light.set_effect(Effect[kwargs[ATTR_EFFECT]], 10)
-
-        self._state = True
+        self._is_on = True
 
     @comm_lock()
     def turn_off(self, **kwargs):
@@ -216,13 +220,13 @@ class MagicBlueLight(Light):
         _LOGGER.debug("%s: MagicBlueLight.turn_off()", self)
         if not self._light.test_connection():
             try:
-                self._light.connect(self._hci_device_id)
+                self._light.connect()
             except Exception as e:
                 _LOGGER.error('%s.turn_off(): Could not connect to %s', self, self._light)
                 return
 
         self._light.turn_off()
-        self._state = False
+        self._is_on = False
 
     def __str__(self):
         return "<MagicBlueLight('{}', '{}')>".format(self._light, self._name)
