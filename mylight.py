@@ -107,13 +107,13 @@ class MagicBlueLight(Light):
         self.hass = hass
         self._light = light
         self._name = name
-        self._is_on = light.is_on
-        self._hs_color = light.rgb_color
-        self._brightness = light.brightness
+        self._is_on = False
+        self._hs_color = (255, 255, 255)
+        self._brightness = 255
         self._available = False
-        self._effect = light.effect
+        self._effect = 0
         self._effects = [e for e in light.effects.__members__.keys()]
-        self._white = light.white
+        self._white = 0
 
     @property
     def name(self):
