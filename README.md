@@ -7,67 +7,48 @@ Mylight and MagicBlue (not currently working)
 
 <img src="https://github.com/xiaohuim/homeassistant-magicblue/raw/master/img/magicblue.jpg" height="350" /><img src="https://github.com/xiaohuim/homeassistant-magicblue/raw/master/img/homeassistant.jpg" height="350" /><img src="https://github.com/xiaohuim/homeassistant-magicblue/raw/master/img/homekit.jpg" height="350" />
 
+MyLight cheap ebay/amazon light with possbility to play music and change colors/effect/brightness
+
+<img src="https://cdn.shopify.com/s/files/1/1026/2915/products/71sjF1R7SnL._SL1500_1024x1024.jpg?v=1499116245" width="300">
+
 ## Requirement
 
 - [`https://github.com/Betree/magicblue`](https://github.com/Betree/magicblue)
+- [`https://github.com/orrpan/mylight`](https://github.com/orrpan/mylight)
 
 ## Installation
-Copy the `magicbluelight.py` file to :
+Copy the `bluetoothbulb.py` file to :
 ```
 <YOUR_CONFIG_DIR>/custom_components/light/magicbluelight.py
 ```
 
-## Configuration
-First, make sure you can see your MagicBlue(s) by running:
-```
-$ magicblueshell
-Magic Blue interactive shell v0.2.2
-Type "help" for a list of available commands
-> help
- ----------------------------
-| List of available commands |
- ----------------------------
-COMMAND         PARAMETERS                    DETAILS
--------         ----------                    -------
-help                                          Show this help
-list_devices                                  List Bluetooth LE devices in range
-ls              //                            //
-connect         mac_address or ID             Connect to light bulb
-disconnect                                    Disconnect from current light bulb
-set_color       name or hexadecimal value     Change bulb's color
-set_warm_light  intensity[0.0-1.0]            Set warm light
-turn            on|off                        Turn on / off the bulb
-exit                                          Exit the script
-> ls
-Listing Bluetooth LE devices in range for 5 minutes.Press CTRL+C to stop searching.
-ID    Name                           Mac address
---    ----                           -----------
-1     LEDBLE-XXXXXXXX                xx:xx:xx:xx:xx:xx
-```
 
 Modify the following example and add it to your `configuration.yaml` file:
 ```
 light:
-  platform: magicbluelight
+  platform: bluetoothbulb
     name: 'Living Room'
     address: 20:16:01:01:05:a0
+    type: 'magicblue'
     version: 9
 ```
 Multiple devices are supported:
 ```
 light:
-  - platform: magicbluelight
+  - platform: bluetoothbulb
     name: 'Living Room'
     address: 20:16:01:01:05:a0
+    type: 'mylight'
     version: 9
-  - platform: magicbluelight
+  - platform: bluetoothbulb
     name: 'Bedroom'
     address: 20:16:01:01:03:e5
+    type: 'magicblue'
     version: 9
 ```
 
 ## Notes
-- Right now you'll have to manually install the required python module `magicblue`.
+MyLight does not support playing music, use another device for that (different bluetooth modules on bulb)
 
 ## Todo
 - [x] Brightness control
