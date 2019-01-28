@@ -19,7 +19,7 @@ MyLight cheap ebay/amazon light with possbility to play music and change colors/
 ## Installation
 Copy the `bluetoothbulb.py` file to :
 ```
-<YOUR_CONFIG_DIR>/custom_components/light/magicbluelight.py
+<YOUR_CONFIG_DIR>/custom_components/light/bluetoothbulb.py
 ```
 
 
