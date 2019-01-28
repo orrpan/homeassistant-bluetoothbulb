@@ -106,29 +106,35 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         bulb = MyLight(bulb_mac_address, hci_device_id, bulb_version)
 
     # Add devices
-    add_devices([BluetoothBulbLight(hass, bulb, bulb_name)])
+    add_devices([BluetoothBulbLight(hass, bulb, bulb_name, bulb_type)])
     
 
 class BluetoothBulbLight(Light):
     """Representation of an Bluetooth Light."""
-    def __init__(self, hass, light, name):
+    def __init__(self, hass, light, name, bulb_type):
         """Initialize an Bluetooth Light."""
 
         self.hass = hass
         self._light = light
         self._name = name
+        self._bulb_type = bulb_type
         self._is_on = False
         self._hs_color = (255, 255, 255)
         self._brightness = 255
         self._available = False
         self._effect = 0
         self._effects = [e for e in light.effects.__members__.keys()]
-        self._white = 0
+        self._white_intensity = 0
 
     @property
     def name(self):
         """Return the display name of this light."""
         return self._name
+
+    @property
+    def type(self):
+        """Return the type of this light."""
+        return self._bulb_type
 
     @property
     def is_on(self):
@@ -161,13 +167,15 @@ class BluetoothBulbLight(Light):
         return self._effects
 
     @property
-    def white(self):
+    def white_intensity(self):
         """Return white."""
-        return self._white
+        return self._white_intensity
 
     @property
     def supported_features(self):
         """Return the supported features."""
+        if self._bulb_type == TYPE_MYLIGHT:
+            return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT | SUPPORT_WHITE_VALUE
         return SUPPORT_BRIGHTNESS | SUPPORT_COLOR | SUPPORT_EFFECT
 
     def update(self):
@@ -187,6 +195,7 @@ class BluetoothBulbLight(Light):
             self._brightness = self._light.brightness
             self._hs_color = color_util.color_RGB_to_hs(*self._light.rgb_color)
             self._effect = self._light.effect
+            self._white_intensity = self._light.white_intensity
             self._available = True
         except Exception as ex:
             _LOGGER.debug("%s._update_blocking(): Exception during update status: %s", self, ex)
@@ -205,24 +214,26 @@ class BluetoothBulbLight(Light):
 
         if not self.is_on:
             self._light.turn_on()
-        else:
-            if ATTR_HS_COLOR in kwargs and ATTR_BRIGHTNESS in kwargs:
-                rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
-                self._light.set_all(rgb, kwargs[ATTR_BRIGHTNESS])
-                self._brightness = kwargs[ATTR_BRIGHTNESS]
-                self._hs_color = kwargs[ATTR_HS_COLOR]
-            elif ATTR_HS_COLOR in kwargs:
-                rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
-                self._light.set_rgb_color(rgb)
-                self._hs_color = kwargs[ATTR_HS_COLOR]
-            if ATTR_BRIGHTNESS in kwargs:
-                self._light.set_brightness(kwargs[ATTR_BRIGHTNESS])
-                self._brightness = kwargs[ATTR_BRIGHTNESS]
-            if ATTR_EFFECT in kwargs:
-                self._light.set_effect(Effect[kwargs[ATTR_EFFECT]])
-                self._effect = kwargs[ATTR_EFFECT]
 
         self._is_on = True
+        
+        if ATTR_EFFECT in kwargs:
+            self._light.set_effect(kwargs[ATTR_EFFECT])
+            return
+        
+        if ATTR_WHITE_VALUE in kwargs:
+            self._light.set_warm_light(kwargs[ATTR_WHITE_VALUE])
+            self._white_intensity = kwargs[ATTR_WHITE_VALUE]
+                
+        if ATTR_HS_COLOR in kwargs:
+            rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
+            self._light.set_rgb_color(rgb)
+            self._hs_color = kwargs[ATTR_HS_COLOR]
+
+        if ATTR_BRIGHTNESS in kwargs:
+            self._light.set_brightness(kwargs[ATTR_BRIGHTNESS])
+            self._brightness = kwargs[ATTR_BRIGHTNESS]
+        
 
     @comm_lock()
     def turn_off(self, **kwargs):
