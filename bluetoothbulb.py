@@ -6,9 +6,9 @@ import voluptuous as vol
 
 # Import the device class from the component that you want to support
 from homeassistant.components.light import (
-    ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_EFFECT,
-    SUPPORT_COLOR, SUPPORT_BRIGHTNESS, SUPPORT_EFFECT,
-    Light, PLATFORM_SCHEMA, SUPPORT_WHITE_VALUE, ATTR_WHITE_VALUE
+    ATTR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_EFFECT, ATTR_WHITE_VALUE,
+    SUPPORT_COLOR, SUPPORT_BRIGHTNESS, SUPPORT_EFFECT, SUPPORT_WHITE_VALUE, 
+    Light, PLATFORM_SCHEMA
 )
 
 import homeassistant.helpers.config_validation as cv
