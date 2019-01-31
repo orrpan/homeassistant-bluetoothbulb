@@ -190,13 +190,12 @@ class BluetoothBulbLight(Light):
             if not self._light.test_connection():
                 self._light.connect()
 
-            self._light.update()
+            self._available = self._light.update()
             self._is_on = self._light.is_on
             self._brightness = self._light.brightness
             self._hs_color = color_util.color_RGB_to_hs(*self._light.rgb_color)
             self._effect = self._light.effect
             self._white_intensity = self._light.white_intensity
-            self._available = True
         except Exception as ex:
             _LOGGER.debug("%s._update_blocking(): Exception during update status: %s", self, ex)
             self._available = False
@@ -222,7 +221,7 @@ class BluetoothBulbLight(Light):
             return
         
         if ATTR_WHITE_VALUE in kwargs:
-            self._light.set_warm_light(kwargs[ATTR_WHITE_VALUE])
+            self._light.set_white_intensity(kwargs[ATTR_WHITE_VALUE])
             self._white_intensity = kwargs[ATTR_WHITE_VALUE]
                 
         if ATTR_HS_COLOR in kwargs:
