@@ -119,7 +119,7 @@ class BluetoothBulbLight(Light):
         self._name = name
         self._bulb_type = bulb_type
         self._is_on = False
-        self._hs_color = (255, 255, 255)
+        self._hs_color = (0, 0)
         self._brightness = 255
         self._available = False
         self._effect = 0
@@ -190,12 +190,13 @@ class BluetoothBulbLight(Light):
             if not self._light.test_connection():
                 self._light.connect()
 
-            self._available = self._light.update()
-            self._is_on = self._light.is_on
-            self._brightness = self._light.brightness
-            self._hs_color = color_util.color_RGB_to_hs(*self._light.rgb_color)
-            self._effect = self._light.effect
-            self._white_intensity = self._light.white_intensity
+            device_info = self._light.get_device_info()
+            self._is_on = device_info['is_on']
+            self._brightness = device_info['brightness']
+            self._hs_color = color_util.color_RGB_to_hs(*device_info['rgb_color'])
+            self._effect = device_info['effect']
+            self._white_intensity = device_info['cold']
+            self._available = True
         except Exception as ex:
             _LOGGER.debug("%s._update_blocking(): Exception during update status: %s", self, ex)
             self._available = False
@@ -218,20 +219,21 @@ class BluetoothBulbLight(Light):
         
         if ATTR_EFFECT in kwargs:
             self._light.set_effect(kwargs[ATTR_EFFECT])
+            self._effect = kwargs[ATTR_EFFECT]
             return
         
         if ATTR_WHITE_VALUE in kwargs:
             self._light.set_white_intensity(kwargs[ATTR_WHITE_VALUE])
             self._white_intensity = kwargs[ATTR_WHITE_VALUE]
                 
+        if ATTR_BRIGHTNESS in kwargs:
+            self._light.set_brightness(kwargs[ATTR_BRIGHTNESS])
+            self._brightness = kwargs[ATTR_BRIGHTNESS]
+
         if ATTR_HS_COLOR in kwargs:
             rgb = color_util.color_hs_to_RGB(*kwargs[ATTR_HS_COLOR])
             self._light.set_rgb_color(rgb)
             self._hs_color = kwargs[ATTR_HS_COLOR]
-
-        if ATTR_BRIGHTNESS in kwargs:
-            self._light.set_brightness(kwargs[ATTR_BRIGHTNESS])
-            self._brightness = kwargs[ATTR_BRIGHTNESS]
         
 
     @comm_lock()
