@@ -191,10 +191,11 @@ class BluetoothBulbLight(Light):
                 self._light.connect()
 
             device_info = self._light.get_device_info()
-            self._is_on = device_info['is_on']
+            self._is_on = device_info['on']
             self._brightness = device_info['brightness']
             self._hs_color = color_util.color_RGB_to_hs(*device_info['rgb_color'])
-            self._effect = device_info['effect']
+            #self._effect = device_info['effect']
+            self._effect = None
             self._white_intensity = device_info['cold']
             self._available = True
         except Exception as ex:
